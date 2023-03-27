@@ -1,88 +1,78 @@
+#include <stdarg.h>
+#include <unistd.h>
 #include "main.h"
 /**
- * print_specified_data - Prints an argument from a list
- * of arguments in a way determined by a given specifier
- *
- * @args: The list of arguments from which our
- * argument of interest can be found
- *
- * @format_ptr_ptr: The ptr to the format string ptr
- *
- * Return: The number of characters printed
- */
-int print_specified_data(va_list args, const char **format_ptr_ptr)
+  * find_function - function that finds formats for _printf
+  * calls the corresponding function.
+  * @format: format (char, string, int, decimal)
+  * Return: NULL or function associated ;
+  */
+int (*find_function(const char *format))(va_list)
 {
-	/* check if the specifier_char matches any pre-defined */
-	/* value of the next char in the format string */
-	switch (*(*(format_ptr_ptr) + 1))
-	{
-		case 'c':
-			/* dereference format_ptr & increment it by 1 */
-			/* this moves format_ptr to the next character */
-			*format_ptr_ptr = *(format_ptr_ptr) + 1;
-			return (print_char(args));
-		case 's':
-			*format_ptr_ptr = *(format_ptr_ptr) + 1;
-			return (print_string(args));
-		case 'd':
-		case 'i':
-			*format_ptr_ptr = *(format_ptr_ptr) + 1;
-			return (print_integer(args));
-		default:
-			/* when no specifier char */
-			return (write(STDOUT_FILENO, "%%", 1));
-	}
-}
+	unsigned int i = 0;
+	code_f find_f[] = {
+		{"c", print_char},
+		{"s", print_string},
+		{"i", print_int},
+		{"d", print_dec},
+		{"r", print_rev},
+		{"b", print_bin},
+		{"u", print_unsig},
+		{"o", print_octal},
+		{"x", print_x},
+		{"X", print_X},
+		{"R", print_rot13},
+		{NULL, NULL}
+	};
 
+	while (find_f[i].sc)
+	{
+		if (find_f[i].sc[0] == (*format))
+			return (find_f[i].f);
+		i++;
+	}
+	return (NULL);
+}
 /**
- * _printf - Prints a formatted string to stdout
- *
- * @format: The format string
- * @...: The arguments to be printed
- *
- * Return: The number of characters printed
- */
+  * _printf - function that produces output according to a format.
+  * @format: format (char, string, int, decimal)
+  * Return: size the output text;
+  */
 int _printf(const char *format, ...)
 {
-	va_list args;
-	/* pointer to the current character in the format string */
-	const char *format_ptr		  = format;
-	int			num_chars_printed = 0;
+	va_list ap;
+	int (*f)(va_list);
+	unsigned int i = 0, cprint = 0;
 
-	if (!format) /* check if format is NULL pointer */
-	{
+	if (format == NULL)
 		return (-1);
-	}
-
-	/* initialize the args pointer to start at the beginning */
-	va_start(args, format);
-
-	while (*format_ptr)
+	va_start(ap, format);
+	while (format[i])
 	{
-		switch (*format_ptr)
+		while (format[i] != '%' && format[i])
 		{
-			case '%': /* if the format specifier % is encountered */
-				if (*(format_ptr + 1) == '%') /* if next char == % */
-				{
-					/*  print % */
-					num_chars_printed += write(STDOUT_FILENO, format_ptr, 1);
-					format_ptr++;
-					break;
-				}
-				/* we have a potential specifier character */
-				num_chars_printed += print_specified_data(args, &format_ptr);
-				break;
-			default: /* if any other character is encountered */
-				num_chars_printed += write(STDOUT_FILENO, format_ptr, 1);
-				break;
+			_putchar(format[i]);
+			cprint++;
+			i++;
 		}
-		format_ptr++;
+		if (format[i] == '\0')
+			return (cprint);
+		f = find_function(&format[i + 1]);
+		if (f != NULL)
+		{
+			cprint += f(ap);
+			i += 2;
+			continue;
+		}
+		if (!format[i + 1])
+			return (-1);
+		_putchar(format[i]);
+		cprint++;
+		if (format[i + 1] == '%')
+			i += 2;
+		else
+			i++;
 	}
-	va_end(args);
-	if (args == NULL)
-	{
-		return (-1);
-	}
-	return (num_chars_printed);
+	va_end(ap);
+	return (cprint);
 }
-
