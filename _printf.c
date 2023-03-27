@@ -79,5 +79,10 @@ int _printf(const char *format, ...)
 		format_ptr++;
 	}
 	va_end(args);
+	if (args == NULL)
+	{
+		return (-1);
+	}
 	return (num_chars_printed);
 }
+
